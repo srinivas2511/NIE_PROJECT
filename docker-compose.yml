@@ -15,5 +15,13 @@ services:
       timeout: 5s
       retries: 5
 
+  chromadb:
+    image: chromadb/chroma:1.0.0
+    ports:
+      - "8025:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+
 volumes:
   postgres_data:
+  chroma_data:

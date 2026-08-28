@@ -1,11 +1,17 @@
 from app.agents.base import BaseAgent
+from app.rag.pipeline import answer_with_rag
 
 
 class RAGAgent(BaseAgent):
     agent_type = "rag"
 
     def run(self, description: str, prior_results: list[str]) -> str:
-        return (
-            f"[RAG] Would retrieve relevant enterprise documents for: '{description}'. "
-            "(RAG pipeline not yet implemented — see FR-3.)"
-        )
+        try:
+            result = answer_with_rag(description)
+        except Exception as exc:  # noqa: BLE001 -- surface a clear inline error, don't crash
+            return f"[RAG] Could not generate a grounded answer: {exc}"
+
+        if not result.sources:
+            return f"[RAG] {result.answer}"
+
+        return f"[RAG] {result.answer}\n\nSources: {', '.join(result.sources)}"
