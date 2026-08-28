@@ -5,6 +5,7 @@ from app.models.enterprise_request import EnterpriseRequest
 from app.models.sub_task import SubTask
 from app.orchestrator.decomposer import decompose
 from app.rbac.roles import can_use_agent
+from app.rbac.zero_trust import verify_continuous_access
 
 
 def run_orchestration(request: EnterpriseRequest, db: Session) -> EnterpriseRequest:
@@ -12,7 +13,6 @@ def run_orchestration(request: EnterpriseRequest, db: Session) -> EnterpriseRequ
     and persist the results. Runs synchronously -- agents are stubs for now.
     """
     plans = decompose(request.text)
-    role = request.user.role
 
     subtasks = [
         SubTask(request_id=request.id, agent_type=plan.agent_type, description=plan.description)
@@ -27,6 +27,18 @@ def run_orchestration(request: EnterpriseRequest, db: Session) -> EnterpriseRequ
     any_failed = False
     any_denied = False
     for subtask in subtasks:
+        # Zero-Trust (FR-5): re-verify identity/authorization fresh immediately
+        # before this subtask, rather than reusing a role captured once for
+        # the whole request -- covers both this inter-agent dispatch and (for
+        # the rag agent) the data-access it's about to perform.
+        verification = verify_continuous_access(request.user_id, db)
+        if not verification.verified:
+            subtask.status = "denied"
+            subtask.result = f"Zero-Trust verification failed: {verification.reason}."
+            any_denied = True
+            continue
+
+        role = verification.role
         if not can_use_agent(role, subtask.agent_type):
             subtask.status = "denied"
             subtask.result = (

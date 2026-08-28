@@ -36,4 +36,14 @@ def get_current_user(
     if user is None:
         raise credentials_error
 
+    # Zero-Trust (FR-5): re-checked on every request, not just at login --
+    # an already-issued, unexpired token from a deactivated account is
+    # rejected immediately rather than trusted until it expires.
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account is deactivated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     return user

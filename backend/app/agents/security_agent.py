@@ -6,8 +6,8 @@ class SecurityAgent(BaseAgent):
 
     def run(self, description: str, prior_results: list[str], role: str) -> str:
         return (
-            f"[Security] RBAC check for role '{role}': agent permissions for this request were "
-            "already enforced during orchestration -- any denied subtask is marked "
-            "status='denied' above. Continuous Zero-Trust verification per request/session is "
-            "not yet implemented — see FR-5."
+            f"[Security] RBAC + Zero-Trust check for role '{role}': identity and role permissions "
+            "were freshly re-verified against the database immediately before every subtask in "
+            "this request ran -- not reused from login or from earlier subtasks. Any denial from "
+            "either check is marked status='denied' above."
         )
