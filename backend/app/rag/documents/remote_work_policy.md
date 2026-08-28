@@ -1,3 +1,6 @@
+---
+allowed_roles: [employee, hr, admin]
+---
 # Remote Work Policy
 
 Employees may work remotely up to three days per week, subject to manager approval. Employees whose

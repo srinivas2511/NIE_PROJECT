@@ -289,3 +289,15 @@ textarea {
   color: #dc2626;
   background: rgba(220, 38, 38, 0.1);
 }
+
+.status-denied,
+.status-partially_denied {
+  color: #d97706;
+  background: rgba(217, 119, 6, 0.1);
+}
+
+.user-role {
+  font-size: 12px;
+  color: var(--text);
+  text-transform: capitalize;
+}

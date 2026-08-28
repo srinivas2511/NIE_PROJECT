@@ -34,7 +34,9 @@ export default function RequestsPage() {
       <header>
         <h1>Enterprise Assistant</h1>
         <div>
-          <span>{user?.full_name}</span>
+          <span>
+            {user?.full_name} <span className="user-role">({user?.role})</span>
+          </span>
           <button type="button" onClick={logout}>
             Log out
           </button>

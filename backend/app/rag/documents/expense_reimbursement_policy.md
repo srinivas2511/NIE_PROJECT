@@ -1,3 +1,6 @@
+---
+allowed_roles: [employee, hr, admin]
+---
 # Expense Reimbursement Policy
 
 Employees may be reimbursed for reasonable, business-related expenses incurred while performing

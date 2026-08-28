@@ -1,3 +1,6 @@
+---
+allowed_roles: [employee, hr, admin]
+---
 # IT Security Policy
 
 All employees must follow these security requirements when accessing company systems:

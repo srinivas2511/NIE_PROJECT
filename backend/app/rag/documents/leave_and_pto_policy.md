@@ -1,3 +1,6 @@
+---
+allowed_roles: [employee, hr, admin]
+---
 # Leave and PTO Policy
 
 **Paid Time Off (PTO)**: Full-time employees accrue 18 days of PTO per year during their first

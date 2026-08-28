@@ -1,3 +1,6 @@
+---
+allowed_roles: [employee, hr, admin]
+---
 # New Employee Onboarding Guide
 
 **Before day one**: IT provisions a company laptop and email account, and HR sends a welcome

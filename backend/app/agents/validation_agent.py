@@ -4,7 +4,7 @@ from app.agents.base import BaseAgent
 class ValidationAgent(BaseAgent):
     agent_type = "validation"
 
-    def run(self, description: str, prior_results: list[str]) -> str:
+    def run(self, description: str, prior_results: list[str], role: str) -> str:
         if not prior_results:
             return (
                 "[Validation] No prior subtask results to review. "
