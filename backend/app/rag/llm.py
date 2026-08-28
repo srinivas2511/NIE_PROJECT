@@ -12,7 +12,7 @@ def generate(prompt: str) -> str:
         response = requests.post(
             f"{settings.ollama_base_url}/api/generate",
             json={"model": settings.ollama_model, "prompt": prompt, "stream": False},
-            timeout=60,
+            timeout=180,
         )
         response.raise_for_status()
     except requests.RequestException as exc:
