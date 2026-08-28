@@ -11,4 +11,6 @@ class SubTaskOut(BaseModel):
     description: str
     status: str
     result: str | None
+    confidence: float | None
+    explanation: str | None
     created_at: datetime

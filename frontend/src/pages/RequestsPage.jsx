@@ -2,6 +2,13 @@ import { useEffect, useState } from "react";
 import { createRequest, listRequests } from "../api/requests";
 import { useAuth } from "../context/AuthContext";
 
+function confidenceTier(confidence) {
+  if (confidence == null) return null;
+  if (confidence < 0.4) return "low";
+  if (confidence < 0.7) return "medium";
+  return "high";
+}
+
 export default function RequestsPage() {
   const { user, logout } = useAuth();
   const [requests, setRequests] = useState([]);
@@ -70,7 +77,13 @@ export default function RequestsPage() {
                   <li key={s.id}>
                     <span className="subtask-agent">{s.agent_type}</span>
                     <span className={`status status-${s.status}`}>{s.status}</span>
+                    {s.confidence != null && (
+                      <span className={`confidence confidence-${confidenceTier(s.confidence)}`}>
+                        {Math.round(s.confidence * 100)}% confidence
+                      </span>
+                    )}
                     <p className="subtask-result">{s.result}</p>
+                    {s.explanation && <p className="subtask-explanation">Why: {s.explanation}</p>}
                   </li>
                 ))}
               </ul>

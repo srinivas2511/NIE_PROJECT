@@ -12,4 +12,6 @@ def _get_model() -> SentenceTransformer:
 
 def embed(texts: list[str]) -> list[list[float]]:
     model = _get_model()
-    return model.encode(texts, convert_to_numpy=True).tolist()
+    # Normalized so L2 distance is bounded to [0, 2] -- FR-6 confidence scoring
+    # (app/rag/pipeline.py) relies on that bound.
+    return model.encode(texts, convert_to_numpy=True, normalize_embeddings=True).tolist()

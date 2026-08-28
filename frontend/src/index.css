@@ -280,6 +280,36 @@ textarea {
   color: var(--text);
 }
 
+.subtask-explanation {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--text);
+  opacity: 0.8;
+}
+
+.confidence {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.confidence-low {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+}
+
+.confidence-medium {
+  color: #d97706;
+  background: rgba(217, 119, 6, 0.1);
+}
+
+.confidence-high {
+  color: #16a34a;
+  background: rgba(22, 163, 74, 0.1);
+}
+
 .status-completed {
   color: #16a34a;
   background: rgba(22, 163, 74, 0.1);
