@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db
 from app.models.enterprise_request import EnterpriseRequest
 from app.models.user import User
+from app.orchestrator.orchestrator import run_orchestration
 from app.schemas.request import RequestCreate, RequestOut
 
 router = APIRouter(prefix="/api/requests", tags=["requests"])
@@ -21,7 +22,7 @@ def create_request(
     db.add(enterprise_request)
     db.commit()
     db.refresh(enterprise_request)
-    return enterprise_request
+    return run_orchestration(enterprise_request, db)
 
 
 @router.get("", response_model=list[RequestOut])

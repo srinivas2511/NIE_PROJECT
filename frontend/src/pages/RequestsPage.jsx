@@ -62,6 +62,17 @@ export default function RequestsPage() {
             <span className="request-time">
               {new Date(r.created_at).toLocaleString()}
             </span>
+            {r.subtasks?.length > 0 && (
+              <ul className="subtask-list">
+                {r.subtasks.map((s) => (
+                  <li key={s.id}>
+                    <span className="subtask-agent">{s.agent_type}</span>
+                    <span className={`status status-${s.status}`}>{s.status}</span>
+                    <p className="subtask-result">{s.result}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
           </li>
         ))}
         {requests.length === 0 && <li className="empty">No requests yet.</li>}

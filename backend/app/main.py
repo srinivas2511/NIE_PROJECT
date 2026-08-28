@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import auth, requests
 from app.core.config import settings
 from app.core.database import Base, engine
-from app.models import EnterpriseRequest, User  # noqa: F401 -- register models with Base
+from app.models import EnterpriseRequest, SubTask, User  # noqa: F401 -- register models with Base
 
 app = FastAPI(title="Secure Autonomous Multi-Agent Enterprise Assistant")
 

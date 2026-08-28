@@ -245,3 +245,47 @@ textarea {
   font-size: 12px;
   color: var(--text);
 }
+
+.subtask-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.subtask-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.subtask-agent {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-h);
+  min-width: 70px;
+}
+
+.subtask-result {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.status-completed {
+  color: #16a34a;
+  background: rgba(22, 163, 74, 0.1);
+}
+
+.status-failed {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+}

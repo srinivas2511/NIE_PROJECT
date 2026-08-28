@@ -18,3 +18,6 @@ class EnterpriseRequest(Base):
     )
 
     user: Mapped["User"] = relationship(back_populates="requests")
+    subtasks: Mapped[list["SubTask"]] = relationship(
+        back_populates="request", cascade="all, delete-orphan", order_by="SubTask.id"
+    )
