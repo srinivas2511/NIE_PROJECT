@@ -6,15 +6,11 @@ class RAGAgent(BaseAgent):
     agent_type = "rag"
 
     def run(self, description: str, prior_results: list[AgentResult], role: str) -> AgentResult:
-        try:
-            result = answer_with_rag(description, role)
-        except Exception as exc:  # noqa: BLE001 -- surface a clear inline error, don't crash
-            return AgentResult(
-                text=f"[RAG] Could not generate a grounded answer: {exc}",
-                confidence=0.0,
-                explanation="The RAG pipeline (retrieval or LLM call) failed, so no grounded "
-                "answer could be produced.",
-            )
+        # Let a pipeline failure (retrieval/LLM) propagate to the orchestrator's
+        # uniform except-block handling -- it already logs the real error and
+        # keeps a generic, safe message on the requester-facing result (NFR-1),
+        # rather than duplicating that logic (and the leak it used to have) here.
+        result = answer_with_rag(description, role)
 
         text = f"[RAG] {result.answer}"
         if result.sources:

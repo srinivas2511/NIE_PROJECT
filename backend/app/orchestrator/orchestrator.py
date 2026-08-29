@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
@@ -13,8 +14,14 @@ from app.orchestrator.decomposer import decompose
 from app.rbac.roles import can_use_agent
 from app.rbac.zero_trust import verify_continuous_access
 
+logger = logging.getLogger(__name__)
+
 DENIAL_CONFIDENCE = 1.0
 DENIAL_EXPLANATION = "This is a certain policy match (access-control decision), not a hedge."
+GENERIC_AGENT_ERROR = (
+    "This subtask failed with an unexpected error. An administrator can check the audit "
+    "log for details."
+)
 
 
 def compute_request_status(subtasks: list[SubTask]) -> str:
@@ -48,6 +55,7 @@ def run_orchestration(request: EnterpriseRequest, db: Session) -> EnterpriseRequ
     prior_results: list[AgentResult] = []
     for subtask in subtasks:
         agent_result: AgentResult | None = None
+        error_detail: str | None = None
 
         # Zero-Trust (FR-5): re-verify identity/authorization fresh immediately
         # before this subtask, rather than reusing a role captured once for
@@ -113,8 +121,16 @@ def run_orchestration(request: EnterpriseRequest, db: Session) -> EnterpriseRequ
                         prior_results.append(agent_result)
                     audit_action = f"{subtask.agent_type}.run"
                 except Exception as exc:  # noqa: BLE001 -- isolate one agent's failure
+                    # NFR-1: never show the raw exception to the requester -- it can
+                    # contain internal details (infra hostnames, file paths, etc).
+                    # Full detail goes to the server log and the (admin-only) audit
+                    # log's context instead.
+                    logger.exception(
+                        "Agent %s failed for subtask %d", subtask.agent_type, subtask.id
+                    )
+                    error_detail = str(exc)
                     subtask.status = "failed"
-                    subtask.result = f"Agent error: {exc}"
+                    subtask.result = GENERIC_AGENT_ERROR
                     subtask.confidence = None
                     subtask.explanation = (
                         "This subtask failed with an unexpected error; no confidence applies."
@@ -122,7 +138,16 @@ def run_orchestration(request: EnterpriseRequest, db: Session) -> EnterpriseRequ
                     audit_action = f"{subtask.agent_type}.error"
 
         # FR-8: log every agent action, whatever the outcome -- including
-        # denials, where no agent ever ran.
+        # denials, where no agent ever ran. error_detail (admin-only, via
+        # /api/admin/audit-logs) is where the real exception text lives now
+        # that it's no longer shown to the requester (NFR-1).
+        agent_action_context = {
+            "agent_type": subtask.agent_type,
+            "status": subtask.status,
+            "confidence": subtask.confidence,
+        }
+        if error_detail is not None:
+            agent_action_context["error_detail"] = error_detail
         log_event(
             db,
             event_type="agent_action",
@@ -131,11 +156,7 @@ def run_orchestration(request: EnterpriseRequest, db: Session) -> EnterpriseRequ
             role=verification.role,
             request_id=request.id,
             subtask_id=subtask.id,
-            context={
-                "agent_type": subtask.agent_type,
-                "status": subtask.status,
-                "confidence": subtask.confidence,
-            },
+            context=agent_action_context,
         )
 
         # FR-8: data access -- the rag agent actually queried the vector store

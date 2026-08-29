@@ -35,8 +35,23 @@ app.include_router(approvals.router)
 app.include_router(admin.router)
 
 
+DEFAULT_JWT_SECRET = "change-me-in-production"
+
+
 @app.on_event("startup")
 def on_startup() -> None:
+    # NFR-1: a default/well-known signing key lets anyone forge a valid JWT
+    # for any user, including admin. Warn loudly rather than fail silently.
+    if settings.jwt_secret_key == DEFAULT_JWT_SECRET:
+        logger.warning(
+            "=" * 70
+            + "\nSECURITY WARNING: JWT_SECRET_KEY is still the default placeholder "
+            "value.\nAnyone who knows this default (it's documented in "
+            ".env.example) can forge\nvalid auth tokens for ANY user, including "
+            "admin. Set a real random secret\nin backend/.env before this is "
+            "anything but a local dev/demo instance.\n" + "=" * 70
+        )
+
     Base.metadata.create_all(bind=engine)
 
     db = SessionLocal()
