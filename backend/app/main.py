@@ -3,17 +3,19 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import approvals, auth, requests
+from app.api.routes import admin, approvals, auth, requests
 from app.core.config import settings
-from app.core.database import Base, engine
+from app.core.database import Base, SessionLocal, engine
 from app.models import (  # noqa: F401 -- register models with Base
     AuditLog,
     EnterpriseRequest,
+    RolePermission,
     SubTask,
     User,
     WorkflowExecution,
 )
 from app.rag.ingest import ingest_documents
+from app.rbac.seed import seed_default_permissions
 
 logger = logging.getLogger(__name__)
 
@@ -30,11 +32,20 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(requests.router)
 app.include_router(approvals.router)
+app.include_router(admin.router)
 
 
 @app.on_event("startup")
 def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
+
+    db = SessionLocal()
+    try:
+        seeded = seed_default_permissions(db)
+        if seeded:
+            logger.info("Seeded %d default role permission(s).", seeded)
+    finally:
+        db.close()
 
     try:
         count = ingest_documents()

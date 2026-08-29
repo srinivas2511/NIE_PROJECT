@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from sqlalchemy import JSON, DateTime, ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 
@@ -28,3 +28,9 @@ class AuditLog(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
     )
+
+    user: Mapped["User | None"] = relationship()
+
+    @property
+    def user_email(self) -> str | None:
+        return self.user.email if self.user else None

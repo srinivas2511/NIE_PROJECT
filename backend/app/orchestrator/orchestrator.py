@@ -60,7 +60,7 @@ def run_orchestration(request: EnterpriseRequest, db: Session) -> EnterpriseRequ
             audit_action = "zero_trust.deny"
         else:
             role = verification.role
-            if not can_use_agent(role, subtask.agent_type):
+            if not can_use_agent(role, subtask.agent_type, db):
                 subtask.status = "denied"
                 subtask.result = (
                     f"Access denied: role '{role}' is not permitted to use the "

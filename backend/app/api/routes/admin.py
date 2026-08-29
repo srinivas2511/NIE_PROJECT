@@ -1,0 +1,134 @@
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import Session
+
+from app.api.deps import get_current_user, get_db
+from app.models.audit_log import AuditLog
+from app.models.role_permission import RolePermission
+from app.models.user import User
+from app.rbac.roles import AGENT_TYPES, VALID_ROLES
+from app.schemas.admin import (
+    AuditLogOut,
+    PermissionsMatrixOut,
+    PermissionToggleRequest,
+    UserAdminOut,
+    UserUpdateRequest,
+)
+
+router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+DEFAULT_AUDIT_LOG_LIMIT = 100
+MAX_AUDIT_LOG_LIMIT = 500
+
+
+def _require_admin(current_user: User) -> None:
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Only admins may access this."
+        )
+
+
+def _build_matrix(db: Session) -> PermissionsMatrixOut:
+    rows = db.query(RolePermission).all()
+    matrix: dict[str, list[str]] = {role: [] for role in sorted(VALID_ROLES)}
+    for row in rows:
+        matrix.setdefault(row.role, []).append(row.agent_type)
+    for role in matrix:
+        matrix[role].sort()
+    return PermissionsMatrixOut(
+        roles=sorted(VALID_ROLES), agent_types=sorted(AGENT_TYPES), matrix=matrix
+    )
+
+
+@router.get("/users", response_model=list[UserAdminOut])
+def list_users(
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+) -> list[User]:
+    _require_admin(current_user)
+    return db.query(User).order_by(User.created_at).all()
+
+
+@router.patch("/users/{user_id}", response_model=UserAdminOut)
+def update_user(
+    user_id: int,
+    payload: UserUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> User:
+    _require_admin(current_user)
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if user.id == current_user.id and (
+        (payload.role is not None and payload.role != "admin")
+        or (payload.is_active is not None and not payload.is_active)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot demote or deactivate your own account.",
+        )
+
+    if payload.role is not None:
+        if payload.role not in VALID_ROLES:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid role. Valid roles: {', '.join(sorted(VALID_ROLES))}",
+            )
+        user.role = payload.role
+    if payload.is_active is not None:
+        user.is_active = payload.is_active
+
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@router.get("/permissions", response_model=PermissionsMatrixOut)
+def get_permissions(
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+) -> PermissionsMatrixOut:
+    _require_admin(current_user)
+    return _build_matrix(db)
+
+
+@router.post("/permissions/toggle", response_model=PermissionsMatrixOut)
+def toggle_permission(
+    payload: PermissionToggleRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> PermissionsMatrixOut:
+    _require_admin(current_user)
+
+    if payload.role not in VALID_ROLES:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid role.")
+    if payload.agent_type not in AGENT_TYPES:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid agent type.")
+
+    existing = (
+        db.query(RolePermission)
+        .filter(RolePermission.role == payload.role, RolePermission.agent_type == payload.agent_type)
+        .first()
+    )
+    if payload.allowed and existing is None:
+        db.add(RolePermission(role=payload.role, agent_type=payload.agent_type))
+        db.commit()
+    elif not payload.allowed and existing is not None:
+        db.delete(existing)
+        db.commit()
+
+    return _build_matrix(db)
+
+
+@router.get("/audit-logs", response_model=list[AuditLogOut])
+def list_audit_logs(
+    event_type: str | None = None,
+    limit: int = Query(default=DEFAULT_AUDIT_LOG_LIMIT, le=MAX_AUDIT_LOG_LIMIT, ge=1),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[AuditLog]:
+    _require_admin(current_user)
+    query = db.query(AuditLog)
+    if event_type:
+        query = query.filter(AuditLog.event_type == event_type)
+    return query.order_by(AuditLog.created_at.desc()).limit(limit).all()

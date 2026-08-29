@@ -47,6 +47,7 @@ export default function RequestsPage() {
             {user?.full_name} <span className="user-role">({user?.role})</span>
           </span>
           {user?.role === "admin" && <Link to="/approvals">Approvals</Link>}
+          {user?.role === "admin" && <Link to="/admin">Admin</Link>}
           <button type="button" onClick={logout}>
             Log out
           </button>
