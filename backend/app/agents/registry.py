@@ -1,3 +1,20 @@
+"""NFR-4 (Scalability): adding a new agent type touches only a handful of
+small, additive spots -- no orchestrator/API/schema redesign required:
+
+1. Write the agent class (subclass BaseAgent, app/agents/).
+2. Register an instance in AGENT_REGISTRY below -- this alone makes it
+   invokable and immediately manageable in the FR-11 admin Permissions UI
+   (app/rbac/roles.py's get_agent_types() derives from this registry).
+3. Add a keyword-routing entry in app/orchestrator/decomposer.py's
+   AGENT_KEYWORDS so requests actually reach it.
+4. Optionally add it to app/hitl/gate.py's SENSITIVE_AGENT_TYPES if it
+   should always require human approval regardless of confidence.
+
+A startup check (app/main.py) validates steps 3-4 reference only agent
+types that are actually registered here, catching a typo at deploy time
+instead of at first-request time.
+"""
+
 from app.agents.analytics_agent import AnalyticsAgent
 from app.agents.base import BaseAgent
 from app.agents.rag_agent import RAGAgent

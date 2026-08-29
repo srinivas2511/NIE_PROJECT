@@ -11,7 +11,7 @@ from app.models.role_permission import RolePermission
 from app.models.sub_task import SubTask
 from app.models.user import User
 from app.rag.evaluation import run_evaluation
-from app.rbac.roles import AGENT_TYPES, VALID_ROLES
+from app.rbac.roles import VALID_ROLES, get_agent_types
 from app.schemas.admin import (
     AuditLogOut,
     PermissionsMatrixOut,
@@ -44,7 +44,7 @@ def _build_matrix(db: Session) -> PermissionsMatrixOut:
     for role in matrix:
         matrix[role].sort()
     return PermissionsMatrixOut(
-        roles=sorted(VALID_ROLES), agent_types=sorted(AGENT_TYPES), matrix=matrix
+        roles=sorted(VALID_ROLES), agent_types=sorted(get_agent_types()), matrix=matrix
     )
 
 
@@ -111,7 +111,7 @@ def toggle_permission(
 
     if payload.role not in VALID_ROLES:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid role.")
-    if payload.agent_type not in AGENT_TYPES:
+    if payload.agent_type not in get_agent_types():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid agent type.")
 
     existing = (
