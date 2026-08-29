@@ -20,4 +20,10 @@ class RAGAgent(BaseAgent):
         if result.sources:
             text += f"\n\nSources: {', '.join(result.sources)}"
 
-        return AgentResult(text=text, confidence=result.confidence, explanation=result.explanation)
+        return AgentResult(
+            text=text,
+            confidence=result.confidence,
+            explanation=result.explanation,
+            sensitive=result.sensitive,
+            sources=result.sources,
+        )

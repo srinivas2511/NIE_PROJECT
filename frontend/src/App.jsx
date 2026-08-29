@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
+import ApprovalsPage from "./pages/ApprovalsPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import RequestsPage from "./pages/RequestsPage";
@@ -17,6 +18,14 @@ function App() {
           element={
             <ProtectedRoute>
               <RequestsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/approvals"
+          element={
+            <ProtectedRoute>
+              <ApprovalsPage />
             </ProtectedRoute>
           }
         />

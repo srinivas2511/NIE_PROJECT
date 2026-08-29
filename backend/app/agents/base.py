@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -10,6 +10,13 @@ class AgentResult:
     text: str
     confidence: float
     explanation: str
+    # FR-7 (HITL): whether this decision touched sensitive/restricted data,
+    # regardless of confidence. Only RAGAgent sets this; others default False.
+    sensitive: bool = False
+    # FR-8 (audit): documents this decision was grounded on, if any -- lets the
+    # orchestrator log a data_access event without re-deriving it. Empty for
+    # every agent except RAGAgent.
+    sources: list[str] = field(default_factory=list)
 
 
 class BaseAgent(ABC):

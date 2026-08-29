@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from app.rag.llm import generate
 from app.rag.vector_store import query
+from app.rbac.roles import VALID_ROLES
 
 GROUNDING_PROMPT_TEMPLATE = """You are an enterprise assistant. Answer the question using ONLY the \
 context below. If the context does not contain the answer, say so -- do not make up information.
@@ -25,6 +26,10 @@ class RAGResult:
     confidence: float
     explanation: str
     access_denied: bool = False
+    # FR-7 (HITL): flagged even when access is permitted, if grounding touched
+    # a restricted-tier document (not open to every role) -- an extra review
+    # step for confidential-data access, distinct from a hard access denial.
+    sensitive: bool = False
 
 
 def _distance_to_confidence(distance: float) -> float:
@@ -77,6 +82,11 @@ def answer_with_rag(query_text: str, role: str, n_results: int = 3) -> RAGResult
         f"chunk, from '{best.source}' (distance={best.distance:.3f}); lower distance "
         "yields higher confidence."
     )
+    sensitive = any(set(c.allowed_roles) != VALID_ROLES for c in allowed_chunks)
     return RAGResult(
-        answer=answer, sources=sources, confidence=confidence, explanation=explanation
+        answer=answer,
+        sources=sources,
+        confidence=confidence,
+        explanation=explanation,
+        sensitive=sensitive,
     )

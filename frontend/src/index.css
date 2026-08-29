@@ -310,6 +310,22 @@ textarea {
   background: rgba(22, 163, 74, 0.1);
 }
 
+.status-pending_approval {
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.1);
+}
+
+.status-rejected {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+}
+
+.approval-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
 .status-completed {
   color: #16a34a;
   background: rgba(22, 163, 74, 0.1);

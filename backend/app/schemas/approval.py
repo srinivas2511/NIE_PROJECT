@@ -3,7 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 
-class SubTaskOut(BaseModel):
+class PendingApprovalOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -13,6 +13,11 @@ class SubTaskOut(BaseModel):
     result: str | None
     confidence: float | None
     explanation: str | None
-    approved_by_email: str | None
-    approved_at: datetime | None
     created_at: datetime
+    request_id: int
+    request_text: str
+    requester_email: str
+
+
+class RejectRequest(BaseModel):
+    reason: str | None = None

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { createRequest, listRequests } from "../api/requests";
 import { useAuth } from "../context/AuthContext";
 
@@ -44,6 +45,7 @@ export default function RequestsPage() {
           <span>
             {user?.full_name} <span className="user-role">({user?.role})</span>
           </span>
+          {user?.role === "admin" && <Link to="/approvals">Approvals</Link>}
           <button type="button" onClick={logout}>
             Log out
           </button>
@@ -84,6 +86,12 @@ export default function RequestsPage() {
                     )}
                     <p className="subtask-result">{s.result}</p>
                     {s.explanation && <p className="subtask-explanation">Why: {s.explanation}</p>}
+                    {s.approved_by_email && (
+                      <p className="subtask-explanation">
+                        Reviewed by {s.approved_by_email} at{" "}
+                        {new Date(s.approved_at).toLocaleString()}
+                      </p>
+                    )}
                   </li>
                 ))}
               </ul>

@@ -3,10 +3,10 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import auth, requests
+from app.api.routes import approvals, auth, requests
 from app.core.config import settings
 from app.core.database import Base, engine
-from app.models import EnterpriseRequest, SubTask, User  # noqa: F401 -- register models with Base
+from app.models import AuditLog, EnterpriseRequest, SubTask, User  # noqa: F401 -- register models with Base
 from app.rag.ingest import ingest_documents
 
 logger = logging.getLogger(__name__)
@@ -23,6 +23,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(requests.router)
+app.include_router(approvals.router)
 
 
 @app.on_event("startup")
