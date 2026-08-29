@@ -35,3 +35,15 @@ export async function getMetrics() {
   const { data } = await client.get("/api/admin/metrics");
   return data;
 }
+
+export async function getLatestRagEvaluation() {
+  const { data } = await client.get("/api/admin/rag-evaluation");
+  return data;
+}
+
+export async function runRagEvaluation() {
+  // No client-side timeout override needed -- axios defaults to none, and
+  // this call realistically takes a couple of minutes (~12 real LLM calls).
+  const { data } = await client.post("/api/admin/rag-evaluation/run");
+  return data;
+}

@@ -1,11 +1,15 @@
+from dataclasses import asdict
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.metrics.evaluator import compute_metrics
 from app.models.audit_log import AuditLog
+from app.models.rag_evaluation_run import RagEvaluationRun
 from app.models.role_permission import RolePermission
 from app.models.user import User
+from app.rag.evaluation import run_evaluation
 from app.rbac.roles import AGENT_TYPES, VALID_ROLES
 from app.schemas.admin import (
     AuditLogOut,
@@ -15,6 +19,7 @@ from app.schemas.admin import (
     UserUpdateRequest,
 )
 from app.schemas.metrics import EvaluationReport
+from app.schemas.rag_evaluation import RagEvaluationRunOut
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -142,3 +147,30 @@ def get_metrics(
 ) -> EvaluationReport:
     _require_admin(current_user)
     return EvaluationReport(**compute_metrics(db))
+
+
+@router.post("/rag-evaluation/run", response_model=RagEvaluationRunOut)
+def run_rag_evaluation(
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+) -> RagEvaluationRun:
+    # NFR-2: admin-triggered on demand, not automatic -- this makes ~12 real
+    # LLM calls and realistically takes a couple of minutes.
+    _require_admin(current_user)
+    report = run_evaluation()
+    run = RagEvaluationRun(
+        baseline_accuracy=report.baseline_accuracy,
+        grounded_accuracy=report.grounded_accuracy,
+        cases=[asdict(c) for c in report.cases],
+    )
+    db.add(run)
+    db.commit()
+    db.refresh(run)
+    return run
+
+
+@router.get("/rag-evaluation", response_model=RagEvaluationRunOut | None)
+def get_latest_rag_evaluation(
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+) -> RagEvaluationRun | None:
+    _require_admin(current_user)
+    return db.query(RagEvaluationRun).order_by(RagEvaluationRun.created_at.desc()).first()

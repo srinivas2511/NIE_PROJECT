@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import {
+  getLatestRagEvaluation,
   getMetrics,
   getPermissionsMatrix,
   listAuditLogs,
   listUsers,
+  runRagEvaluation,
   togglePermission,
   updateUser,
 } from "../api/admin";
@@ -92,6 +94,97 @@ function MetricsSection() {
         <MetricsTable title="Human-in-the-Loop" data={report.hitl} />
         <MetricsTable title="Explainability" data={report.explainability} />
       </div>
+    </section>
+  );
+}
+
+function RagEvaluationSection() {
+  const [run, setRun] = useState(null);
+  const [running, setRunning] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    getLatestRagEvaluation()
+      .then(setRun)
+      .catch(() => setError("Could not load the latest evaluation."));
+  }, []);
+
+  async function handleRun() {
+    setRunning(true);
+    setError("");
+    try {
+      const result = await runRagEvaluation();
+      setRun(result);
+    } catch {
+      setError("Could not complete the evaluation run.");
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return (
+    <section className="admin-section">
+      <h2>RAG vs. Baseline (Hallucination Check)</h2>
+      <p className="subtask-explanation">
+        Each question has a company-specific fact invented for this project's seed documents --
+        no LLM could know it without retrieval. "Baseline" calls the LLM directly with no
+        context; "Grounded" uses the real RAG pipeline. A wide accuracy gap is a measurable
+        hallucination-rate reduction attributable to RAG (NFR-2).
+      </p>
+      <button type="button" onClick={handleRun} disabled={running}>
+        {running ? "Running (this takes a couple of minutes)..." : "Run Evaluation"}
+      </button>
+      {error && <p className="error">{error}</p>}
+      {run && (
+        <>
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Run at</th>
+                <th>Baseline accuracy</th>
+                <th>Grounded accuracy</th>
+                <th>Improvement</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{new Date(run.created_at).toLocaleString()}</td>
+                <td>{Math.round(run.baseline_accuracy * 100)}%</td>
+                <td>{Math.round(run.grounded_accuracy * 100)}%</td>
+                <td>
+                  +{Math.round((run.grounded_accuracy - run.baseline_accuracy) * 100)}
+                  pts
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Question</th>
+                <th>Baseline answer</th>
+                <th>Grounded answer</th>
+                <th>Sources</th>
+              </tr>
+            </thead>
+            <tbody>
+              {run.cases.map((c) => (
+                <tr key={c.question}>
+                  <td>{c.question}</td>
+                  <td className={c.baseline_correct ? "confidence-high" : "confidence-low"}>
+                    {c.baseline_answer}
+                  </td>
+                  <td className={c.grounded_correct ? "confidence-high" : "confidence-low"}>
+                    {c.grounded_answer}
+                  </td>
+                  <td>{c.grounded_sources.join(", ") || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+      {!run && !error && <p>No evaluation has been run yet.</p>}
     </section>
   );
 }
@@ -303,6 +396,7 @@ export default function AdminPage() {
           <PermissionsSection />
           <AuditLogSection />
           <MetricsSection />
+          <RagEvaluationSection />
         </>
       )}
     </div>
