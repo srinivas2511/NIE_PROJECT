@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { approveSubtask, listPendingApprovals, rejectSubtask } from "../api/approvals";
 import { useAuth } from "../context/AuthContext";
+import { humanizeAgent } from "../utils/labels";
 
 export default function ApprovalsPage() {
   const { user } = useAuth();
@@ -57,7 +58,7 @@ export default function ApprovalsPage() {
             <p className="request-text">
               <strong>{p.requester_email}</strong> asked: "{p.request_text}"
             </p>
-            <span className="subtask-agent">{p.agent_type}</span>
+            <span className="subtask-agent">{humanizeAgent(p.agent_type)}</span>
             {p.confidence != null && (
               <span className="confidence">{Math.round(p.confidence * 100)}% confidence</span>
             )}

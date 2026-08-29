@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { createRequest, listRequests } from "../api/requests";
 import { useAuth } from "../context/AuthContext";
+import { humanizeAgent, humanizeStatus } from "../utils/labels";
 
 function confidenceTier(confidence) {
   if (confidence == null) return null;
@@ -69,7 +70,7 @@ export default function RequestsPage() {
         {requests.map((r) => (
           <li key={r.id}>
             <p className="request-text">{r.text}</p>
-            <span className={`status status-${r.status}`}>{r.status}</span>
+            <span className={`status status-${r.status}`}>{humanizeStatus(r.status)}</span>
             <span className="request-time">
               {new Date(r.created_at).toLocaleString()}
             </span>
@@ -77,8 +78,8 @@ export default function RequestsPage() {
               <ul className="subtask-list">
                 {r.subtasks.map((s) => (
                   <li key={s.id}>
-                    <span className="subtask-agent">{s.agent_type}</span>
-                    <span className={`status status-${s.status}`}>{s.status}</span>
+                    <span className="subtask-agent">{humanizeAgent(s.agent_type)}</span>
+                    <span className={`status status-${s.status}`}>{humanizeStatus(s.status)}</span>
                     {s.confidence != null && (
                       <span className={`confidence confidence-${confidenceTier(s.confidence)}`}>
                         {Math.round(s.confidence * 100)}% confidence

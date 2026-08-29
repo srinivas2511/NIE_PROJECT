@@ -262,6 +262,9 @@ textarea {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 8px;
+  background: var(--code-bg);
+  border-radius: 6px;
+  padding: 10px 12px;
 }
 
 .subtask-agent {
@@ -277,7 +280,9 @@ textarea {
   flex-basis: 100%;
   margin: 0;
   font-size: 14px;
+  line-height: 1.5;
   color: var(--text);
+  white-space: pre-line;
 }
 
 .subtask-explanation {

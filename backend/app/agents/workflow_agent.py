@@ -8,6 +8,12 @@ from app.workflow.planner import plan_steps
 CONFIDENCE = 0.85
 
 
+def _format_output(output: dict) -> str:
+    # Human-readable "key: value, key: value" instead of Python dict repr,
+    # which would otherwise leak straight into the UI (FR-10).
+    return ", ".join(f"{key.replace('_', ' ')}: {value}" for key, value in output.items())
+
+
 class WorkflowAgent(BaseAgent):
     agent_type = "workflow"
 
@@ -19,7 +25,7 @@ class WorkflowAgent(BaseAgent):
         ]
 
         step_lines = [
-            f"{i}. {step['function_name']}: {step['output']}"
+            f"{i}. {step['function_name'].replace('_', ' ').title()} — {_format_output(step['output'])}"
             for i, step in enumerate(executed, start=1)
         ]
         text = f"[Workflow] Executed {len(executed)} step(s):\n" + "\n".join(step_lines)
