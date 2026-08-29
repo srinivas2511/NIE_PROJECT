@@ -17,18 +17,23 @@ class AgentResult:
     # orchestrator log a data_access event without re-deriving it. Empty for
     # every agent except RAGAgent.
     sources: list[str] = field(default_factory=list)
+    # FR-9: simulated-function steps this decision executed, if any -- lets the
+    # orchestrator persist a WorkflowExecution row per step without re-deriving
+    # it. Empty for every agent except WorkflowAgent. Each entry is
+    # {"function_name": str, "output": dict}.
+    workflow_steps: list[dict] = field(default_factory=list)
 
 
 class BaseAgent(ABC):
     """Common interface every specialized agent implements.
 
-    Real agent logic lands with later FRs (FR-3 RAG done; FR-7 HITL next);
-    security/analytics/workflow are still deterministic stubs so the
-    orchestrator's decomposition/routing/aggregation can be built and
-    tested now -- their confidence reflects that honestly (fixed, low).
-    `role` is the requesting user's role -- most agents ignore it (the
-    orchestrator already gates *whether* an agent runs at all per FR-4);
-    RAGAgent uses it to gate *which documents* it may ground on.
+    Real agent logic lands with later FRs (FR-3 RAG, FR-9 Workflow done;
+    security/analytics remain deterministic stubs so the orchestrator's
+    decomposition/routing/aggregation can be exercised for agent types that
+    don't have a dedicated FR yet -- their confidence reflects that honestly
+    (fixed, low). `role` is the requesting user's role -- most agents ignore
+    it (the orchestrator already gates *whether* an agent runs at all per
+    FR-4); RAGAgent uses it to gate *which documents* it may ground on.
     """
 
     agent_type: str

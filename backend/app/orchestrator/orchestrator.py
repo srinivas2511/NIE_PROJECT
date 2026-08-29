@@ -6,6 +6,7 @@ from app.audit.logger import log_event
 from app.hitl.gate import requires_approval
 from app.models.enterprise_request import EnterpriseRequest
 from app.models.sub_task import SubTask
+from app.models.workflow_execution import WorkflowExecution
 from app.orchestrator.decomposer import decompose
 from app.rbac.roles import can_use_agent
 from app.rbac.zero_trust import verify_continuous_access
@@ -75,6 +76,22 @@ def run_orchestration(request: EnterpriseRequest, db: Session) -> EnterpriseRequ
                     agent_result = agent.run(subtask.description, prior_results, role)
                     subtask.result = agent_result.text
                     subtask.confidence = agent_result.confidence
+
+                    # FR-9: persist each simulated workflow step as a real
+                    # record, regardless of whether this subtask is later
+                    # gated for approval -- the simulated action already
+                    # happened; HITL controls trust/finalization, not
+                    # whether the (simulated) side effect occurred, same
+                    # precedent as RAG's retrieval always happening (FR-8).
+                    for i, step in enumerate(agent_result.workflow_steps, start=1):
+                        db.add(
+                            WorkflowExecution(
+                                subtask_id=subtask.id,
+                                step_number=i,
+                                function_name=step["function_name"],
+                                output=step["output"],
+                            )
+                        )
 
                     # HITL (FR-7): sensitive or below-threshold decisions don't
                     # auto-complete -- they wait for a human approver
