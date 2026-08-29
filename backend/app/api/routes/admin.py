@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
+from app.metrics.evaluator import compute_metrics
 from app.models.audit_log import AuditLog
 from app.models.role_permission import RolePermission
 from app.models.user import User
@@ -13,6 +14,7 @@ from app.schemas.admin import (
     UserAdminOut,
     UserUpdateRequest,
 )
+from app.schemas.metrics import EvaluationReport
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -132,3 +134,11 @@ def list_audit_logs(
     if event_type:
         query = query.filter(AuditLog.event_type == event_type)
     return query.order_by(AuditLog.created_at.desc()).limit(limit).all()
+
+
+@router.get("/metrics", response_model=EvaluationReport)
+def get_metrics(
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+) -> EvaluationReport:
+    _require_admin(current_user)
+    return EvaluationReport(**compute_metrics(db))

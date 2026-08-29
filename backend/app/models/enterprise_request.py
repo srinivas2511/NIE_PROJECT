@@ -16,6 +16,9 @@ class EnterpriseRequest(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
+    # FR-12: set when run_orchestration finishes, regardless of final status --
+    # completed_at - created_at is the end-to-end orchestration latency.
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     user: Mapped["User"] = relationship(back_populates="requests")
     subtasks: Mapped[list["SubTask"]] = relationship(

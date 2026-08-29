@@ -30,3 +30,8 @@ export async function listAuditLogs(eventType) {
   });
   return data;
 }
+
+export async function getMetrics() {
+  const { data } = await client.get("/api/admin/metrics");
+  return data;
+}

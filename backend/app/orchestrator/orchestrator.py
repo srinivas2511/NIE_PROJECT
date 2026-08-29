@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from sqlalchemy.orm import Session
 
 from app.agents.base import AgentResult
@@ -152,6 +154,7 @@ def run_orchestration(request: EnterpriseRequest, db: Session) -> EnterpriseRequ
             )
 
     request.status = compute_request_status(subtasks)
+    request.completed_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(request)
     return request

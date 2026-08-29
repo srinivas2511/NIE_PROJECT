@@ -17,4 +17,5 @@ class RequestOut(BaseModel):
     text: str
     status: str
     created_at: datetime
+    completed_at: datetime | None
     subtasks: list[SubTaskOut] = []

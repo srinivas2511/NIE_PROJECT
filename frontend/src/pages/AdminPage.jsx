@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import {
+  getMetrics,
   getPermissionsMatrix,
   listAuditLogs,
   listUsers,
@@ -11,6 +12,89 @@ import { useAuth } from "../context/AuthContext";
 import { humanizeAgent } from "../utils/labels";
 
 const EVENT_TYPES = ["", "agent_action", "data_access", "approval"];
+
+function formatMetricValue(key, value) {
+  if (value == null) return "—";
+  if (typeof value === "object") {
+    const entries = Object.entries(value);
+    if (entries.length === 0) return "—";
+    return entries.map(([k, v]) => `${humanizeAgent(k)}: ${formatMetricValue(key, v)}`).join(", ");
+  }
+  if (key.endsWith("_rate") || key.endsWith("_coverage") || key.includes("confidence")) {
+    return `${Math.round(value * 100)}%`;
+  }
+  if (key.endsWith("_seconds")) {
+    return `${value.toFixed(2)}s`;
+  }
+  if (typeof value === "number" && !Number.isInteger(value)) {
+    return value.toFixed(2);
+  }
+  return String(value);
+}
+
+function humanizeMetricKey(key) {
+  return key.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+}
+
+function MetricsTable({ title, data }) {
+  return (
+    <div>
+      <h3>{title}</h3>
+      <table className="admin-table">
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          {Object.entries(data).map(([key, value]) => (
+            <tr key={key}>
+              <td>{humanizeMetricKey(key)}</td>
+              <td>{formatMetricValue(key, value)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function MetricsSection() {
+  const [report, setReport] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    getMetrics().then(setReport).catch(() => setError("Could not load evaluation metrics."));
+  }, []);
+
+  if (error) {
+    return (
+      <section className="admin-section">
+        <h2>Evaluation Metrics</h2>
+        <p className="error">{error}</p>
+      </section>
+    );
+  }
+  if (!report) return null;
+
+  return (
+    <section className="admin-section">
+      <h2>Evaluation Metrics</h2>
+      <p className="subtask-explanation">
+        Accuracy figures are confidence-based proxies (no labeled ground-truth dataset exists),
+        not verified-correctness scores.
+      </p>
+      <div className="metrics-grid">
+        <MetricsTable title="Accuracy" data={report.accuracy} />
+        <MetricsTable title="Timing" data={report.timing} />
+        <MetricsTable title="Security" data={report.security} />
+        <MetricsTable title="Human-in-the-Loop" data={report.hitl} />
+        <MetricsTable title="Explainability" data={report.explainability} />
+      </div>
+    </section>
+  );
+}
 
 function UsersSection({ currentUserId }) {
   const [users, setUsers] = useState([]);
@@ -218,6 +302,7 @@ export default function AdminPage() {
           <UsersSection currentUserId={user.id} />
           <PermissionsSection />
           <AuditLogSection />
+          <MetricsSection />
         </>
       )}
     </div>
