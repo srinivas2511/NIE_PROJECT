@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import {
+  getDecisionTrace,
   getLatestRagEvaluation,
   getMetrics,
   getPermissionsMatrix,
@@ -11,7 +12,7 @@ import {
   updateUser,
 } from "../api/admin";
 import { useAuth } from "../context/AuthContext";
-import { humanizeAgent } from "../utils/labels";
+import { humanizeAgent, humanizeStatus } from "../utils/labels";
 
 const EVENT_TYPES = ["", "agent_action", "data_access", "approval"];
 
@@ -316,7 +317,7 @@ function PermissionsSection() {
   );
 }
 
-function AuditLogSection() {
+function AuditLogSection({ onTrace }) {
   const [logs, setLogs] = useState([]);
   const [eventType, setEventType] = useState("");
   const [error, setError] = useState("");
@@ -352,6 +353,7 @@ function AuditLogSection() {
             <th>Request</th>
             <th>Subtask</th>
             <th>Context</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -365,11 +367,18 @@ function AuditLogSection() {
               <td>{log.request_id ?? "—"}</td>
               <td>{log.subtask_id ?? "—"}</td>
               <td className="audit-context">{log.context ? JSON.stringify(log.context) : "—"}</td>
+              <td>
+                {log.subtask_id != null && (
+                  <button type="button" onClick={() => onTrace(log.subtask_id)}>
+                    Trace
+                  </button>
+                )}
+              </td>
             </tr>
           ))}
           {logs.length === 0 && (
             <tr>
-              <td colSpan={8}>No audit log entries.</td>
+              <td colSpan={9}>No audit log entries.</td>
             </tr>
           )}
         </tbody>
@@ -378,11 +387,154 @@ function AuditLogSection() {
   );
 }
 
+function TraceSection({ requestedSubtaskId, requestNonce }) {
+  const [subtaskIdInput, setSubtaskIdInput] = useState("");
+  const [trace, setTrace] = useState(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function lookup(id) {
+    if (!id) return;
+    setLoading(true);
+    setError("");
+    try {
+      const result = await getDecisionTrace(id);
+      setTrace(result);
+    } catch {
+      setError(`Could not find a trace for subtask ${id}.`);
+      setTrace(null);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (requestedSubtaskId != null) {
+      setSubtaskIdInput(String(requestedSubtaskId));
+      lookup(requestedSubtaskId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestedSubtaskId, requestNonce]);
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    lookup(subtaskIdInput);
+  }
+
+  return (
+    <section className="admin-section">
+      <h2>Trace a Decision</h2>
+      <p className="subtask-explanation">
+        Assembles the full causal trail for one subtask -- its own rationale/confidence, the
+        request that produced it, and every audit log entry tied to it, in order (NFR-3).
+      </p>
+      <form onSubmit={handleSubmit} className="trace-lookup">
+        <input
+          type="number"
+          value={subtaskIdInput}
+          onChange={(e) => setSubtaskIdInput(e.target.value)}
+          placeholder="Subtask ID"
+        />
+        <button type="submit" disabled={loading}>
+          {loading ? "Looking up..." : "Look Up"}
+        </button>
+      </form>
+      {error && <p className="error">{error}</p>}
+      {trace && (
+        <>
+          <table className="admin-table">
+            <tbody>
+              <tr>
+                <td>Request</td>
+                <td>
+                  #{trace.request.id} — "{trace.request.text}"
+                </td>
+              </tr>
+              <tr>
+                <td>Requester</td>
+                <td>{trace.request.requester_email}</td>
+              </tr>
+              <tr>
+                <td>Agent</td>
+                <td>{humanizeAgent(trace.subtask.agent_type)}</td>
+              </tr>
+              <tr>
+                <td>Status</td>
+                <td>{humanizeStatus(trace.subtask.status)}</td>
+              </tr>
+              <tr>
+                <td>Confidence</td>
+                <td>
+                  {trace.subtask.confidence != null
+                    ? `${Math.round(trace.subtask.confidence * 100)}%`
+                    : "—"}
+                </td>
+              </tr>
+              <tr>
+                <td>Result</td>
+                <td>{trace.subtask.result}</td>
+              </tr>
+              <tr>
+                <td>Explanation</td>
+                <td>{trace.subtask.explanation}</td>
+              </tr>
+              {trace.subtask.approved_by_email && (
+                <tr>
+                  <td>Reviewed by</td>
+                  <td>
+                    {trace.subtask.approved_by_email} at{" "}
+                    {new Date(trace.subtask.approved_at).toLocaleString()}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+          <h3>Audit Trail</h3>
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Type</th>
+                <th>Action</th>
+                <th>Role</th>
+                <th>Context</th>
+              </tr>
+            </thead>
+            <tbody>
+              {trace.audit_trail.map((entry) => (
+                <tr key={entry.id}>
+                  <td>{new Date(entry.created_at).toLocaleString()}</td>
+                  <td>{entry.event_type}</td>
+                  <td>{entry.action}</td>
+                  <td>{entry.role ?? "—"}</td>
+                  <td className="audit-context">
+                    {entry.context ? JSON.stringify(entry.context) : "—"}
+                  </td>
+                </tr>
+              ))}
+              {trace.audit_trail.length === 0 && (
+                <tr>
+                  <td colSpan={5}>No audit log entries for this subtask.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </>
+      )}
+    </section>
+  );
+}
+
 export default function AdminPage() {
   const { user } = useAuth();
+  const [traceRequest, setTraceRequest] = useState({ subtaskId: null, nonce: 0 });
 
   if (user && user.role !== "admin") {
     return <Navigate to="/requests" replace />;
+  }
+
+  function handleTrace(subtaskId) {
+    setTraceRequest({ subtaskId, nonce: Date.now() });
   }
 
   return (
@@ -394,7 +546,11 @@ export default function AdminPage() {
         <>
           <UsersSection currentUserId={user.id} />
           <PermissionsSection />
-          <AuditLogSection />
+          <AuditLogSection onTrace={handleTrace} />
+          <TraceSection
+            requestedSubtaskId={traceRequest.subtaskId}
+            requestNonce={traceRequest.nonce}
+          />
           <MetricsSection />
           <RagEvaluationSection />
         </>

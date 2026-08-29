@@ -428,3 +428,14 @@ textarea {
   color: var(--text-h);
   padding: 4px 6px;
 }
+
+.trace-lookup {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  max-width: 300px;
+}
+
+.trace-lookup input {
+  flex: 1;
+}

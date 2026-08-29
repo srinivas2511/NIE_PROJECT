@@ -8,6 +8,7 @@ from app.metrics.evaluator import compute_metrics
 from app.models.audit_log import AuditLog
 from app.models.rag_evaluation_run import RagEvaluationRun
 from app.models.role_permission import RolePermission
+from app.models.sub_task import SubTask
 from app.models.user import User
 from app.rag.evaluation import run_evaluation
 from app.rbac.roles import AGENT_TYPES, VALID_ROLES
@@ -20,6 +21,7 @@ from app.schemas.admin import (
 )
 from app.schemas.metrics import EvaluationReport
 from app.schemas.rag_evaluation import RagEvaluationRunOut
+from app.schemas.trace import DecisionTraceOut, TraceRequestContext
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -174,3 +176,40 @@ def get_latest_rag_evaluation(
 ) -> RagEvaluationRun | None:
     _require_admin(current_user)
     return db.query(RagEvaluationRun).order_by(RagEvaluationRun.created_at.desc()).first()
+
+
+@router.get("/trace/{subtask_id}", response_model=DecisionTraceOut)
+def get_decision_trace(
+    subtask_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> DecisionTraceOut:
+    """NFR-3: assemble the full causal trail for one decision -- the subtask's
+    own detail, its parent request's context, and every audit log entry tied
+    to it, in order -- rather than requiring manual cross-referencing across
+    three separate views."""
+    _require_admin(current_user)
+
+    subtask = db.query(SubTask).filter(SubTask.id == subtask_id).first()
+    if subtask is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subtask not found")
+
+    audit_trail = (
+        db.query(AuditLog)
+        .filter(AuditLog.subtask_id == subtask_id)
+        .order_by(AuditLog.created_at)
+        .all()
+    )
+
+    return DecisionTraceOut(
+        subtask=subtask,
+        request=TraceRequestContext(
+            id=subtask.request.id,
+            text=subtask.request.text,
+            requester_email=subtask.request.user.email,
+            status=subtask.request.status,
+            created_at=subtask.request.created_at,
+            completed_at=subtask.request.completed_at,
+        ),
+        audit_trail=audit_trail,
+    )

@@ -47,3 +47,8 @@ export async function runRagEvaluation() {
   const { data } = await client.post("/api/admin/rag-evaluation/run");
   return data;
 }
+
+export async function getDecisionTrace(subtaskId) {
+  const { data } = await client.get(`/api/admin/trace/${subtaskId}`);
+  return data;
+}
