@@ -28,13 +28,15 @@ class WorkflowAgent(BaseAgent):
             f"{i}. {step['function_name'].replace('_', ' ').title()} — {_format_output(step['output'])}"
             for i, step in enumerate(executed, start=1)
         ]
-        text = f"[Workflow] Executed {len(executed)} step(s):\n" + "\n".join(step_lines)
+        text = f"Executed {len(executed)} step(s):\n" + "\n".join(step_lines)
 
-        function_names = ", ".join(step["function_name"] for step in executed)
+        function_names = ", ".join(
+            step["function_name"].replace("_", " ").title() for step in executed
+        )
         explanation = (
             f"Multi-step task automation against {len(executed)} simulated enterprise "
             f"function(s) ({function_names}), each deterministic given the request text "
-            "and a fixed mock dataset; the persisted record is in workflow_executions."
+            "and a fixed mock dataset."
         )
 
         return AgentResult(

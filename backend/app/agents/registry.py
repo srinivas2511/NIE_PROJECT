@@ -36,3 +36,20 @@ def get_agent(agent_type: str) -> BaseAgent:
         return AGENT_REGISTRY[agent_type]
     except KeyError:
         raise ValueError(f"No agent registered for type: {agent_type!r}") from None
+
+
+# NFR-7 (Usability): user-facing label for an agent type, mirroring
+# frontend/src/utils/labels.js's AGENT_LABELS -- used wherever backend code
+# builds a sentence shown directly to a requester (RBAC denials, HITL flag
+# reasons) so it doesn't leak the raw internal identifier (e.g. "workflow").
+AGENT_LABELS: dict[str, str] = {
+    "rag": "Knowledge Base",
+    "security": "Security Check",
+    "analytics": "Analytics",
+    "workflow": "Task Automation",
+    "validation": "Validation Review",
+}
+
+
+def humanize_agent_type(agent_type: str) -> str:
+    return AGENT_LABELS.get(agent_type, agent_type.replace("_", " "))

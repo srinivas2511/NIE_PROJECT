@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app.agents.base import AgentResult
-from app.agents.registry import get_agent
+from app.agents.registry import get_agent, humanize_agent_type
 from app.audit.logger import log_event
 from app.hitl.gate import requires_approval
 from app.models.enterprise_request import EnterpriseRequest
@@ -18,7 +18,7 @@ from app.rbac.zero_trust import verify_continuous_access
 logger = logging.getLogger(__name__)
 
 DENIAL_CONFIDENCE = 1.0
-DENIAL_EXPLANATION = "This is a certain policy match (access-control decision), not a hedge."
+DENIAL_EXPLANATION = "This is a certain result based on access rules, not an estimate."
 GENERIC_AGENT_ERROR = (
     "This subtask failed with an unexpected error. An administrator can check the audit "
     "log for details."
@@ -65,7 +65,7 @@ def run_orchestration(request: EnterpriseRequest, db: Session) -> EnterpriseRequ
         verification = verify_continuous_access(request.user_id, db)
         if not verification.verified:
             subtask.status = "denied"
-            subtask.result = f"Zero-Trust verification failed: {verification.reason}."
+            subtask.result = f"Your access could not be verified: {verification.reason}."
             subtask.confidence = DENIAL_CONFIDENCE
             subtask.explanation = DENIAL_EXPLANATION
             audit_action = "zero_trust.deny"
@@ -74,9 +74,9 @@ def run_orchestration(request: EnterpriseRequest, db: Session) -> EnterpriseRequ
             if not can_use_agent(role, subtask.agent_type, db):
                 subtask.status = "denied"
                 subtask.result = (
-                    f"Access denied: role '{role}' is not permitted to use the "
-                    f"'{subtask.agent_type}' agent. Contact an administrator if you believe "
-                    "this is incorrect."
+                    f"Access denied: the '{role}' role does not have permission to use the "
+                    f"'{humanize_agent_type(subtask.agent_type)}' feature. Contact an "
+                    "administrator if you believe this is incorrect."
                 )
                 subtask.confidence = DENIAL_CONFIDENCE
                 subtask.explanation = DENIAL_EXPLANATION
@@ -119,7 +119,7 @@ def run_orchestration(request: EnterpriseRequest, db: Session) -> EnterpriseRequ
                     if flagged:
                         subtask.status = "pending_approval"
                         subtask.explanation = (
-                            f"{agent_result.explanation} [Flagged for human review: {reason}.]"
+                            f"{agent_result.explanation} Flagged for human review: {reason}."
                         )
                     else:
                         subtask.status = "completed"

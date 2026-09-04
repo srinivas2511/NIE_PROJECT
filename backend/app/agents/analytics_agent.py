@@ -8,12 +8,12 @@ class AnalyticsAgent(BaseAgent):
 
     def run(self, description: str, prior_results: list[AgentResult], role: str) -> AgentResult:
         text = (
-            f"[Analytics] Would analyze enterprise data and produce a report for: "
-            f"'{description}'. (Analytics pipeline not yet implemented.)"
+            f"This is a simulated analytics response for: '{description}'. A full analytics "
+            "pipeline is not yet available."
         )
         return AgentResult(
             text=text,
             confidence=STUB_CONFIDENCE,
-            explanation="This agent is still a placeholder (no real data analysis run) -- "
-            "confidence is fixed low to avoid overstating certainty for unimplemented analysis.",
+            explanation="This is a simulated analysis for demonstration, not a full analytics "
+            "pipeline -- confidence is kept low so it isn't mistaken for a verified finding.",
         )

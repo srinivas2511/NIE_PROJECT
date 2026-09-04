@@ -46,8 +46,8 @@ def answer_with_rag(query_text: str, role: str, n_results: int = 3) -> RAGResult
             answer="No relevant enterprise documents were found for this question.",
             sources=[],
             confidence=NO_MATCH_CONFIDENCE,
-            explanation="No document chunks matched this question in the vector store, so "
-            "there is nothing to ground an answer on.",
+            explanation="No matching documents were found for this question, so there's "
+            "nothing to base an answer on.",
         )
 
     # `chunks` is ordered by relevance (closest match first). Gate on the single best
@@ -64,8 +64,8 @@ def answer_with_rag(query_text: str, role: str, n_results: int = 3) -> RAGResult
             ),
             sources=[],
             confidence=ACCESS_DENIED_CONFIDENCE,
-            explanation="This is a deterministic access-control decision based on document "
-            "role classification, not a probabilistic judgment about answer quality.",
+            explanation="This is a certain result based on access rules, not an estimate of "
+            "answer quality.",
             access_denied=True,
         )
 
@@ -78,9 +78,8 @@ def answer_with_rag(query_text: str, role: str, n_results: int = 3) -> RAGResult
     best = allowed_chunks[0]
     confidence = _distance_to_confidence(best.distance)
     explanation = (
-        f"Derived from vector-similarity between the question and the closest retrieved "
-        f"chunk, from '{best.source}' (distance={best.distance:.3f}); lower distance "
-        "yields higher confidence."
+        f"Based on how closely the matched document ('{best.source}') relates to your "
+        "question -- the closer the match, the higher the confidence."
     )
     sensitive = any(set(c.allowed_roles) != VALID_ROLES for c in allowed_chunks)
     return RAGResult(

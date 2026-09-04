@@ -12,7 +12,7 @@ class RAGAgent(BaseAgent):
         # rather than duplicating that logic (and the leak it used to have) here.
         result = answer_with_rag(description, role)
 
-        text = f"[RAG] {result.answer}"
+        text = result.answer
         if result.sources:
             text += f"\n\nSources: {', '.join(result.sources)}"
 
