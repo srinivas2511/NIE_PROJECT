@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
+from app.audit.logger import log_event
 from app.metrics.evaluator import compute_metrics
 from app.models.audit_log import AuditLog
 from app.models.rag_evaluation_run import RagEvaluationRun
@@ -88,6 +89,19 @@ def update_user(
     if payload.is_active is not None:
         user.is_active = payload.is_active
 
+    log_event(
+        db,
+        event_type="admin",
+        action="admin.user_update",
+        user_id=current_user.id,
+        role=current_user.role,
+        context={
+            "target_user_id": user.id,
+            "target_email": user.email,
+            "new_role": payload.role,
+            "new_is_active": payload.is_active,
+        },
+    )
     db.commit()
     db.refresh(user)
     return user
@@ -121,9 +135,25 @@ def toggle_permission(
     )
     if payload.allowed and existing is None:
         db.add(RolePermission(role=payload.role, agent_type=payload.agent_type))
+        log_event(
+            db,
+            event_type="admin",
+            action="admin.permission_grant",
+            user_id=current_user.id,
+            role=current_user.role,
+            context={"role": payload.role, "agent_type": payload.agent_type},
+        )
         db.commit()
     elif not payload.allowed and existing is not None:
         db.delete(existing)
+        log_event(
+            db,
+            event_type="admin",
+            action="admin.permission_revoke",
+            user_id=current_user.id,
+            role=current_user.role,
+            context={"role": payload.role, "agent_type": payload.agent_type},
+        )
         db.commit()
 
     return _build_matrix(db)
@@ -132,6 +162,7 @@ def toggle_permission(
 @router.get("/audit-logs", response_model=list[AuditLogOut])
 def list_audit_logs(
     event_type: str | None = None,
+    user_id: int | None = None,
     limit: int = Query(default=DEFAULT_AUDIT_LOG_LIMIT, le=MAX_AUDIT_LOG_LIMIT, ge=1),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -140,6 +171,8 @@ def list_audit_logs(
     query = db.query(AuditLog)
     if event_type:
         query = query.filter(AuditLog.event_type == event_type)
+    if user_id is not None:
+        query = query.filter(AuditLog.user_id == user_id)
     return query.order_by(AuditLog.created_at.desc()).limit(limit).all()
 
 
@@ -165,6 +198,17 @@ def run_rag_evaluation(
         cases=[asdict(c) for c in report.cases],
     )
     db.add(run)
+    log_event(
+        db,
+        event_type="admin",
+        action="admin.rag_evaluation_run",
+        user_id=current_user.id,
+        role=current_user.role,
+        context={
+            "baseline_accuracy": report.baseline_accuracy,
+            "grounded_accuracy": report.grounded_accuracy,
+        },
+    )
     db.commit()
     db.refresh(run)
     return run

@@ -3,6 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
+from app.audit.logger import log_event
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.user import User
 from app.schemas.token import Token
@@ -24,6 +25,8 @@ def register(payload: UserCreate, db: Session = Depends(get_db)) -> User:
         full_name=payload.full_name,
     )
     db.add(user)
+    db.flush()  # assigns user.id without committing, so the audit entry below lands atomically with it
+    log_event(db, event_type="auth", action="auth.register", user_id=user.id, role=user.role)
     db.commit()
     db.refresh(user)
     return user
@@ -35,12 +38,29 @@ def login(
 ) -> Token:
     user = db.query(User).filter(User.email == form_data.username).first()
     if user is None or not verify_password(form_data.password, user.hashed_password):
+        # NFR-1: the HTTP response stays identical either way -- only the
+        # (admin-only) audit context distinguishes unknown-email from
+        # bad-password, so nothing about account existence leaks to the caller.
+        log_event(
+            db,
+            event_type="auth",
+            action="auth.login_failure",
+            user_id=user.id if user else None,
+            role=user.role if user else None,
+            context={
+                "email": form_data.username,
+                "reason": "unknown_email" if user is None else "bad_password",
+            },
+        )
+        db.commit()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    log_event(db, event_type="auth", action="auth.login_success", user_id=user.id, role=user.role)
+    db.commit()
     return Token(access_token=create_access_token(subject=user.email))
 
 

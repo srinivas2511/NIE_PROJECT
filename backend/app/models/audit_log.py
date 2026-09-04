@@ -7,9 +7,15 @@ from app.core.database import Base
 
 
 class AuditLog(Base):
-    """FR-8/NFR-6: append-only record of every agent action, data access, and
-    approval. Never updated or deleted by app code -- that omission is the
-    immutability guarantee at the app-code level."""
+    """FR-8/NFR-6: append-only record of every agent action, data access,
+    approval, auth event, and admin change. Immutability is enforced at the
+    DB level, not just by app-code convention: a trigger
+    (audit_logs_no_update_delete -> prevent_audit_log_mutation(), applied
+    via a one-off migration -- see NFR-6) raises on any UPDATE or DELETE
+    against this table, and fires for every role including superusers
+    (the app's own DB role is one), so it can't be bypassed by a future
+    app bug or a stray manual query the way an app-code-only convention
+    could be."""
 
     __tablename__ = "audit_logs"
 

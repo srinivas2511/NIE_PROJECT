@@ -14,7 +14,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { humanizeAgent, humanizeStatus } from "../utils/labels";
 
-const EVENT_TYPES = ["", "agent_action", "data_access", "approval"];
+const EVENT_TYPES = ["", "agent_action", "data_access", "approval", "auth", "admin"];
 
 function formatMetricValue(key, value) {
   if (value == null) return "—";
@@ -320,13 +320,14 @@ function PermissionsSection() {
 function AuditLogSection({ onTrace }) {
   const [logs, setLogs] = useState([]);
   const [eventType, setEventType] = useState("");
+  const [userId, setUserId] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
-    listAuditLogs(eventType || undefined)
+    listAuditLogs(eventType || undefined, userId || undefined)
       .then(setLogs)
       .catch(() => setError("Could not load audit logs."));
-  }, [eventType]);
+  }, [eventType, userId]);
 
   return (
     <section className="admin-section">
@@ -340,6 +341,16 @@ function AuditLogSection({ onTrace }) {
             </option>
           ))}
         </select>
+      </label>
+      <label className="audit-filter">
+        User ID
+        <input
+          type="number"
+          min="1"
+          value={userId}
+          onChange={(e) => setUserId(e.target.value)}
+          placeholder="All users"
+        />
       </label>
       {error && <p className="error">{error}</p>}
       <table className="admin-table">

@@ -180,6 +180,22 @@ def run_orchestration(request: EnterpriseRequest, db: Session) -> EnterpriseRequ
                 context={"sources": agent_result.sources, "sensitive": agent_result.sensitive},
             )
 
+        # NFR-6: parity with the rag branch above -- retrieve_data reads real
+        # (simulated) enterprise headcount/expense data, which is "data
+        # access" the same way rag's retrieval is, not just a generic action.
+        if subtask.agent_type == "workflow" and agent_result is not None:
+            if any(step["function_name"] == "retrieve_data" for step in agent_result.workflow_steps):
+                log_event(
+                    db,
+                    event_type="data_access",
+                    action="workflow.retrieve_data",
+                    user_id=request.user_id,
+                    role=verification.role,
+                    request_id=request.id,
+                    subtask_id=subtask.id,
+                    context={"function": "retrieve_data"},
+                )
+
     request.status = compute_request_status(subtasks)
     request.completed_at = datetime.now(timezone.utc)
     db.commit()
