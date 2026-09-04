@@ -22,4 +22,13 @@ class RAGAgent(BaseAgent):
             explanation=result.explanation,
             sensitive=result.sensitive,
             sources=result.sources,
+            # FR-8: the vector store was queried whenever this ran, regardless
+            # of whether the answer was granted, access-denied, or later
+            # flagged for approval.
+            data_access_events=[
+                {
+                    "action": "rag.retrieve",
+                    "context": {"sources": result.sources, "sensitive": result.sensitive},
+                }
+            ],
         )

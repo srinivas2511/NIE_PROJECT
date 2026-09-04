@@ -8,19 +8,10 @@ from app.audit.logger import log_event
 from app.models.sub_task import SubTask
 from app.models.user import User
 from app.orchestrator.orchestrator import compute_request_status
+from app.rbac.roles import require_admin
 from app.schemas.approval import PendingApprovalOut, RejectRequest
 
 router = APIRouter(prefix="/api/approvals", tags=["approvals"])
-
-
-def _require_admin(current_user: User) -> None:
-    # Route-level permission (who may review), distinct from can_use_agent's
-    # agent-invocation permissions.
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins may review pending approvals.",
-        )
 
 
 def _get_pending_subtask(subtask_id: int, db: Session) -> SubTask:
@@ -55,7 +46,7 @@ def _to_out(subtask: SubTask) -> PendingApprovalOut:
 def list_pending_approvals(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ) -> list[PendingApprovalOut]:
-    _require_admin(current_user)
+    require_admin(current_user, "Only admins may review pending approvals.")
     subtasks = (
         db.query(SubTask)
         .filter(SubTask.status == "pending_approval")
@@ -71,7 +62,7 @@ def approve_subtask(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> PendingApprovalOut:
-    _require_admin(current_user)
+    require_admin(current_user, "Only admins may review pending approvals.")
     subtask = _get_pending_subtask(subtask_id, db)
 
     subtask.status = "completed"
@@ -101,7 +92,7 @@ def reject_subtask(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> PendingApprovalOut:
-    _require_admin(current_user)
+    require_admin(current_user, "Only admins may review pending approvals.")
     subtask = _get_pending_subtask(subtask_id, db)
 
     subtask.status = "rejected"

@@ -12,7 +12,7 @@ from app.models.role_permission import RolePermission
 from app.models.sub_task import SubTask
 from app.models.user import User
 from app.rag.evaluation import run_evaluation
-from app.rbac.roles import VALID_ROLES, get_agent_types
+from app.rbac.roles import VALID_ROLES, get_agent_types, require_admin
 from app.schemas.admin import (
     AuditLogOut,
     PermissionsMatrixOut,
@@ -28,13 +28,6 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 DEFAULT_AUDIT_LOG_LIMIT = 100
 MAX_AUDIT_LOG_LIMIT = 500
-
-
-def _require_admin(current_user: User) -> None:
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Only admins may access this."
-        )
 
 
 def _build_matrix(db: Session) -> PermissionsMatrixOut:
@@ -53,7 +46,7 @@ def _build_matrix(db: Session) -> PermissionsMatrixOut:
 def list_users(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ) -> list[User]:
-    _require_admin(current_user)
+    require_admin(current_user)
     return db.query(User).order_by(User.created_at).all()
 
 
@@ -64,7 +57,7 @@ def update_user(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> User:
-    _require_admin(current_user)
+    require_admin(current_user)
 
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
@@ -111,7 +104,7 @@ def update_user(
 def get_permissions(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ) -> PermissionsMatrixOut:
-    _require_admin(current_user)
+    require_admin(current_user)
     return _build_matrix(db)
 
 
@@ -121,7 +114,7 @@ def toggle_permission(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> PermissionsMatrixOut:
-    _require_admin(current_user)
+    require_admin(current_user)
 
     if payload.role not in VALID_ROLES:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid role.")
@@ -167,7 +160,7 @@ def list_audit_logs(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[AuditLog]:
-    _require_admin(current_user)
+    require_admin(current_user)
     query = db.query(AuditLog)
     if event_type:
         query = query.filter(AuditLog.event_type == event_type)
@@ -180,7 +173,7 @@ def list_audit_logs(
 def get_metrics(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ) -> EvaluationReport:
-    _require_admin(current_user)
+    require_admin(current_user)
     return EvaluationReport(**compute_metrics(db))
 
 
@@ -190,7 +183,7 @@ def run_rag_evaluation(
 ) -> RagEvaluationRun:
     # NFR-2: admin-triggered on demand, not automatic -- this makes ~12 real
     # LLM calls and realistically takes a couple of minutes.
-    _require_admin(current_user)
+    require_admin(current_user)
     report = run_evaluation()
     run = RagEvaluationRun(
         baseline_accuracy=report.baseline_accuracy,
@@ -218,7 +211,7 @@ def run_rag_evaluation(
 def get_latest_rag_evaluation(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ) -> RagEvaluationRun | None:
-    _require_admin(current_user)
+    require_admin(current_user)
     return db.query(RagEvaluationRun).order_by(RagEvaluationRun.created_at.desc()).first()
 
 
@@ -232,7 +225,7 @@ def get_decision_trace(
     own detail, its parent request's context, and every audit log entry tied
     to it, in order -- rather than requiring manual cross-referencing across
     three separate views."""
-    _require_admin(current_user)
+    require_admin(current_user)
 
     subtask = db.query(SubTask).filter(SubTask.id == subtask_id).first()
     if subtask is None:

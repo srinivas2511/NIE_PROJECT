@@ -39,6 +39,19 @@ class WorkflowAgent(BaseAgent):
             "and a fixed mock dataset."
         )
 
+        # NFR-6: retrieve_data reads real (simulated) enterprise headcount/
+        # expense data, which is "data access" the same way rag's retrieval
+        # is, not just a generic action.
+        data_access_events = (
+            [{"action": "workflow.retrieve_data", "context": {"function": "retrieve_data"}}]
+            if any(step["function_name"] == "retrieve_data" for step in executed)
+            else []
+        )
+
         return AgentResult(
-            text=text, confidence=CONFIDENCE, explanation=explanation, workflow_steps=executed
+            text=text,
+            confidence=CONFIDENCE,
+            explanation=explanation,
+            workflow_steps=executed,
+            data_access_events=data_access_events,
         )

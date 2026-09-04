@@ -22,6 +22,11 @@ class AgentResult:
     # it. Empty for every agent except WorkflowAgent. Each entry is
     # {"function_name": str, "output": dict}.
     workflow_steps: list[dict] = field(default_factory=list)
+    # NFR-9 (Maintainability): data_access audit events this decision should
+    # generate, if any -- keeps the orchestrator agent-agnostic (it doesn't
+    # need an `if agent_type == "..."` branch per agent to know who touched
+    # real data). Each entry is {"action": str, "context": dict}.
+    data_access_events: list[dict] = field(default_factory=list)
 
 
 class BaseAgent(ABC):
