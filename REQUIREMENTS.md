@@ -1,16 +1,6 @@
 # Requirements Specification
 ## Secure and Autonomous Multi-Agent Enterprise Assistant
 
-**Department of Computer Science & Engineering, The National Institute of Engineering, Mysore**
-**Batch No:** F10 | **Date:** 19-07-2026
-
-**Team:**
-- Nischitha H L (4NI23CI064)
-- Omkar S Moodvi (4NI23CI068)
-- Sanmitha H (4NI23CI096)
-
-**Guide:** Mr. Gowtham R Naik, Assistant Professor, Dept. of CSE
-
 ---
 
 ## 1. Project Overview
