@@ -1,0 +1,21 @@
+# NFR-8 (Portability): normalize line endings to LF in the repo regardless of
+# a contributor's OS/local git config, so Windows and Ubuntu checkouts of the
+# same file are byte-identical and don't produce spurious cross-platform diffs.
+* text=auto eol=lf
+
+*.py text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.sh text eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary

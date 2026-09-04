@@ -29,14 +29,27 @@ see `docker-compose.yml`.
 
 ### 2. Backend
 
-```bash
+Windows (PowerShell):
+
+```powershell
 cd backend
 python -m venv .venv
-./.venv/Scripts/pip install -r requirements.txt   # Windows
-# source .venv/bin/activate && pip install -r requirements.txt   # Linux/macOS
+./.venv/Scripts/pip install -r requirements.txt
 
 cp .env.example .env   # defaults already point at the Docker Postgres above
 ./.venv/Scripts/python -m uvicorn app.main:app --reload --port 8123
+```
+
+Linux/macOS:
+
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+cp .env.example .env   # defaults already point at the Docker Postgres above
+python -m uvicorn app.main:app --reload --port 8123
 ```
 
 API docs: http://localhost:8123/docs
