@@ -13,6 +13,7 @@ class SubTaskOut(BaseModel):
     result: str | None
     confidence: float | None
     explanation: str | None
+    duration_ms: int | None
     approved_by_email: str | None
     approved_at: datetime | None
     created_at: datetime

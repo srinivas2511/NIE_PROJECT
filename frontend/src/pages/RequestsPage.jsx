@@ -86,6 +86,9 @@ export default function RequestsPage() {
                         {Math.round(s.confidence * 100)}% confidence
                       </span>
                     )}
+                    {s.duration_ms != null && (
+                      <span className="request-time">{(s.duration_ms / 1000).toFixed(1)}s</span>
+                    )}
                     <p className="subtask-result">{s.result}</p>
                     {s.explanation && <p className="subtask-explanation">Why: {s.explanation}</p>}
                     {s.approved_by_email && (

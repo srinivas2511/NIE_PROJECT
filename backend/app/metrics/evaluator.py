@@ -42,8 +42,10 @@ def compute_accuracy_metrics(db: Session) -> dict:
 
 
 def compute_timing_metrics(db: Session) -> dict:
-    """FR-12: 'workflow completion time' -- end-to-end request latency, plus
-    workflow-specific step-count context (FR-9)."""
+    """FR-12/NFR-5: 'workflow completion time' -- end-to-end request latency,
+    workflow-specific step-count context (FR-9), and a per-agent-type
+    breakdown (NFR-5) that localizes *which* agent is slow, since the
+    end-to-end number alone can't."""
     requests = (
         db.query(EnterpriseRequest).filter(EnterpriseRequest.completed_at.isnot(None)).all()
     )
@@ -55,10 +57,19 @@ def compute_timing_metrics(db: Session) -> dict:
         .all()
     )
 
+    subtask_durations_by_agent: dict[str, list[float]] = {}
+    for agent_type, duration_ms in db.query(SubTask.agent_type, SubTask.duration_ms).filter(
+        SubTask.duration_ms.isnot(None)
+    ):
+        subtask_durations_by_agent.setdefault(agent_type, []).append(duration_ms / 1000)
+
     return {
         "requests_measured": len(durations),
         "avg_request_completion_seconds": _avg(durations),
         "avg_workflow_steps_per_subtask": _avg([count for _, count in step_counts]),
+        "avg_subtask_duration_seconds_by_agent": {
+            agent: _avg(vals) for agent, vals in subtask_durations_by_agent.items()
+        },
     }
 
 

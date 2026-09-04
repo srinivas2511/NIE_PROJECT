@@ -26,7 +26,7 @@ function formatMetricValue(key, value) {
   if (key.endsWith("_rate") || key.endsWith("_coverage") || key.includes("confidence")) {
     return `${Math.round(value * 100)}%`;
   }
-  if (key.endsWith("_seconds")) {
+  if (key.includes("_seconds")) {
     return `${value.toFixed(2)}s`;
   }
   if (typeof value === "number" && !Number.isInteger(value)) {

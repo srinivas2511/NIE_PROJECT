@@ -13,6 +13,7 @@ class TimingMetrics(BaseModel):
     requests_measured: int
     avg_request_completion_seconds: float | None
     avg_workflow_steps_per_subtask: float | None
+    avg_subtask_duration_seconds_by_agent: dict[str, float | None]
 
 
 class SecurityMetrics(BaseModel):

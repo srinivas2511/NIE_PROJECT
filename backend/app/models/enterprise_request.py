@@ -13,8 +13,10 @@ class EnterpriseRequest(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
     text: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="received")
+    # NFR-5 (Performance): indexed -- list_requests orders by this on every
+    # page load of a user's request list.
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
     )
     # FR-12: set when run_orchestration finishes, regardless of final status --
     # completed_at - created_at is the end-to-end orchestration latency.

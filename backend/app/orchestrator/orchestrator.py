@@ -1,4 +1,5 @@
 import logging
+import time
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
@@ -83,7 +84,12 @@ def run_orchestration(request: EnterpriseRequest, db: Session) -> EnterpriseRequ
             else:
                 try:
                     agent = get_agent(subtask.agent_type)
+                    # NFR-5 (Performance): time only the agent's own work, not
+                    # the surrounding DB/Zero-Trust/RBAC overhead -- that's
+                    # the part whose speed is agent-specific and actionable.
+                    start = time.perf_counter()
                     agent_result = agent.run(subtask.description, prior_results, role)
+                    subtask.duration_ms = round((time.perf_counter() - start) * 1000)
                     subtask.result = agent_result.text
                     subtask.confidence = agent_result.confidence
 
