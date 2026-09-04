@@ -1,6 +1,8 @@
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models.role_permission import RolePermission
+from app.models.user import User
 
 VALID_ROLES = {"employee", "hr", "admin"}
 
@@ -36,3 +38,11 @@ def can_use_agent(role: str, agent_type: str, db: Session) -> bool:
         .first()
         is not None
     )
+
+
+# NFR-9 (Maintainability): a single, shared admin-gate check -- previously
+# duplicated near-identically as a local _require_admin() in both
+# app/api/routes/admin.py and app/api/routes/approvals.py.
+def require_admin(user: User, detail: str = "Only admins may access this.") -> None:
+    if user.role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)

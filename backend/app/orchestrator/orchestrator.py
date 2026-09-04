@@ -165,35 +165,22 @@ def run_orchestration(request: EnterpriseRequest, db: Session) -> EnterpriseRequ
             context=agent_action_context,
         )
 
-        # FR-8: data access -- the rag agent actually queried the vector store
-        # whenever it ran, regardless of whether the answer was granted,
-        # access-denied, or later flagged for approval.
-        if subtask.agent_type == "rag" and agent_result is not None:
-            log_event(
-                db,
-                event_type="data_access",
-                action="rag.retrieve",
-                user_id=request.user_id,
-                role=verification.role,
-                request_id=request.id,
-                subtask_id=subtask.id,
-                context={"sources": agent_result.sources, "sensitive": agent_result.sensitive},
-            )
-
-        # NFR-6: parity with the rag branch above -- retrieve_data reads real
-        # (simulated) enterprise headcount/expense data, which is "data
-        # access" the same way rag's retrieval is, not just a generic action.
-        if subtask.agent_type == "workflow" and agent_result is not None:
-            if any(step["function_name"] == "retrieve_data" for step in agent_result.workflow_steps):
+        # FR-8/NFR-9: data access -- each agent declares its own
+        # data_access_events (e.g. rag's vector-store retrieval, workflow's
+        # retrieve_data call) on its AgentResult, whatever the outcome, so
+        # this loop stays agent-agnostic instead of hardcoding per-agent-type
+        # branches here.
+        if agent_result is not None:
+            for event in agent_result.data_access_events:
                 log_event(
                     db,
                     event_type="data_access",
-                    action="workflow.retrieve_data",
+                    action=event["action"],
                     user_id=request.user_id,
                     role=verification.role,
                     request_id=request.id,
                     subtask_id=subtask.id,
-                    context={"function": "retrieve_data"},
+                    context=event["context"],
                 )
 
     request.status = compute_request_status(subtasks)
