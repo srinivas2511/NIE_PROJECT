@@ -204,12 +204,4 @@ Minimum 5 recent research journals indexed in Scopus/Web of Science were reviewe
 
 ---
 
-## 15. Guide & Contact Details
 
-- **Guide:** Gowtham R Naik, Assistant Professor
-- **Mobile:** 78923 42728
-- **College Address:** No 50, Koorgalli Village, Hootagalli Industrial Area, Next to BEML, Mysore, Karnataka, 570018
-
----
-
-*Compiled from Project Synopsis (19-07-2026) and Major Project presentation slides, Department of CSE, The National Institute of Engineering, Mysore.*
